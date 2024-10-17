@@ -1,0 +1,6 @@
+[submodule "libavif"]
+	path = libavif
+	url = https://github.com/AOMediaCodec/libavif
+[submodule "simd_math"]
+	path = simd_math
+	url = git@github.com:Lovesan/simd_math.git

@@ -1,0 +1,76 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "MSVC",
+            "displayName": "Visual Studio Community 2022 Release - amd64",
+            "description": "Using compilers for Visual Studio 17 2022 (x64 architecture)",
+            "generator": "Visual Studio 17 2022",
+            "toolset": "host=x64",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            }
+        },
+        {
+            "name": "MinGW",
+            "displayName": "MinGW",
+            "description": "Using x8_64-w64-mingw32 GCC",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc.exe",
+                "CMAKE_CXX_COMPILER": "g++.exe",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "MSVC",
+            "displayName": "Visual Studio Community 2022 Release - amd64 - Release",
+            "configurePreset": "MSVC",
+            "configuration": "Release"
+        },
+        {
+            "name": "MinGW",
+            "description": "Using x8_64-w64-mingw32 GCC",
+            "displayName": "MinGW-Release",
+            "configurePreset": "MinGW"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "MSVC",
+            "description": "",
+            "displayName": "",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "MSVC"
+                },
+                {
+                    "type": "build",
+                    "name": "MSVC"
+                }
+            ]
+        },
+        {
+            "name": "MinGW",
+            "description": "",
+            "displayName": "",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "MinGW"
+                },
+                {
+                    "type": "build",
+                    "name": "MinGW"
+                }
+            ]
+        }
+    ]
+}
