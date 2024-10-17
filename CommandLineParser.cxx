@@ -11,8 +11,8 @@ namespace JxrToAvif
 {
     CommandLineParser::CommandLineParser(int, char**)
         : _argv(nullptr), _argc(0), _speed(DefaultSpeed),
-        _helpRequired(false), _useTiling(true), _format(PixelFormatYuv444),
-        _depth(12), _outputFile(DefaultOutputFile)
+        _helpRequired(false), _useTiling(true), _realMaxCLL(false),
+        _format(PixelFormatYuv444), _depth(12), _outputFile(DefaultOutputFile)
     {
         const auto cmdLine = GetCommandLineW();
         _argv = CommandLineToArgvW(cmdLine, &_argc);
@@ -120,6 +120,10 @@ namespace JxrToAvif
             {
                 _useTiling = false;
             }
+            else if(arg == L"--real-maxcll")
+            {
+                _realMaxCLL = true;
+            }
             else if (hasOutputFile)
             {
                 return false;
@@ -155,5 +159,7 @@ namespace JxrToAvif
         std::cout << "  --format            Output pixel format. Defaults to yuv444.\n";
         std::cout << "                      Must be one of:\n";
         std::cout << "                        rgb, yuv444, yuv422, yuv420, yuv400\n";
+        std::cout << "  --real-maxcll      Calculate real MaxCLL\n";
+        std::cout << "                     instead of top percentile.\n";
     }
 }

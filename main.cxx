@@ -19,7 +19,7 @@
 
 constexpr auto INTERMEDIATE_BITS = 16;  // bit depth of the integer texture given to the encoder;
 
-#define MAXCLL_PERCENTILE 0.9999  // comment out to calculate true MaxCLL instead of top percentile
+#define MAXCLL_PERCENTILE 0.9999
 
 static const float3x3 scrgb_to_bt2100 = {
         2939026994.L / 585553224375.L, 9255011753.L / 3513319346250.L, 173911579.L / 501902763750.L,
@@ -34,9 +34,7 @@ typedef struct ThreadData {
     uint32_t start;
     uint32_t stop;
     double sumOfMaxComp;
-#ifdef MAXCLL_PERCENTILE
     uint32_t *nitCounts;
-#endif
     uint16_t maxNits;
     uint8_t bytesPerColor;
 } ThreadData;
@@ -67,12 +65,11 @@ DWORD WINAPI ThreadFunc(LPVOID lpParam) {
             auto bt2020 = float3_transform(v, mScrgbToBt2100);
             bt2020 = float4_saturate(bt2020);
 
-            float maxComp = float4_hmax(float4_min(bt2020, float4_set(2.f, 2.f, 2.f, 0.f)));
+            auto maxComp = float4_hmax(float4_min(bt2020, float4_set(2.f, 2.f, 2.f, 0.f)));
 
-#ifdef MAXCLL_PERCENTILE
             auto nits = static_cast<uint32_t>(roundf(maxComp * 10000));
             d->nitCounts[nits]++;
-#endif
+
             if (maxComp > maxMaxComp) {
                 maxMaxComp = maxComp;
             }
@@ -107,6 +104,7 @@ int main(int argc, char *argv[]) {
     auto useTiling = cmdLineParser.GetIsTilingUsed();
     auto depth = cmdLineParser.GetDepth();
     auto outputFormat = cmdLineParser.GetPixelFormat();
+    auto realMaxCLL = cmdLineParser.GetIsRealMaxCLL();
 
     int hr = init_jxr_loader_thread();
 
@@ -181,9 +179,7 @@ int main(int argc, char *argv[]) {
                 threadData[i]->stop = jxr_data.height;
             }
 
-#ifdef MAXCLL_PERCENTILE
             threadData[i]->nitCounts = static_cast<uint32_t*>(calloc(10000, sizeof(uint32_t)));
-#endif
 
             HANDLE hThread = CreateThread(
                     NULL,                   // default security attributes
@@ -224,31 +220,34 @@ int main(int argc, char *argv[]) {
             sumOfMaxComp += threadData[i]->sumOfMaxComp;
         }
 
-#ifdef MAXCLL_PERCENTILE
-        uint16_t currentIdx = maxCLL;
-        uint64_t count = 0;
-        uint64_t countTarget = (uint64_t) round((1 - MAXCLL_PERCENTILE) * static_cast<double>(static_cast<uint64_t>(jxr_data.width) * jxr_data.height));
-        while (1) {
-            for (uint32_t i = 0; i < convThreads; i++) {
-                count += threadData[i]->nitCounts[currentIdx];
+        auto pixelCount = static_cast<uint64_t>(jxr_data.width) * jxr_data.height;
+
+        if(!realMaxCLL)
+        {
+            uint16_t currentIdx = maxCLL;
+            uint64_t count = 0;
+            uint64_t countTarget = static_cast<uint64_t>(round((1 - MAXCLL_PERCENTILE) * static_cast<double>(pixelCount)));
+            while (true) {
+                for (uint32_t i = 0; i < convThreads; i++) {
+                    count += threadData[i]->nitCounts[currentIdx];
+                }
+                if (count >= countTarget) {
+                    maxCLL = currentIdx;
+                    break;
+                }
+                currentIdx--;
             }
-            if (count >= countTarget) {
-                maxCLL = currentIdx;
-                break;
-            }
-            currentIdx--;
         }
-#endif
 
         for (uint32_t i = 0; i < convThreads; i++) {
-#ifdef MAXCLL_PERCENTILE
             free(threadData[i]->nitCounts);
-#endif
             free(threadData[i]);
         }
 
-        maxPALL = static_cast<uint16_t>(round(10000 * (sumOfMaxComp / static_cast<double>(static_cast<uint64_t>(jxr_data.width) * jxr_data.height))));
+        maxPALL = static_cast<uint16_t>(round(10000 * (sumOfMaxComp / static_cast<double>(pixelCount))));
     }
+
+    std::cout << "Computed HDR metadata: " << maxCLL << " MaxCLL, " << maxPALL << " MaxPALL.\n";
 
     int returnCode = 1;
     avifEncoder *encoder = nullptr;
@@ -272,8 +271,7 @@ int main(int argc, char *argv[]) {
         break;
     }
 
-    avifImage *image = avifImageCreate(jxr_data.width, jxr_data.height, depth,
-                                       targetFormat); // these values dictate what goes into the final AVIF
+    auto image = avifImageCreate(jxr_data.width, jxr_data.height, depth, targetFormat); // these values dictate what goes into the final AVIF
     if (!image)
     {
         std::cerr << "Out of memory\n";
@@ -302,8 +300,6 @@ int main(int argc, char *argv[]) {
             image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT2020_NCL;
         }
 
-        printf("Computed HDR metadata: %u MaxCLL, %u MaxPALL\n", maxCLL, maxPALL);
-
         image->clli.maxCLL = maxCLL;
         image->clli.maxPALL = maxPALL;
 
@@ -318,7 +314,7 @@ int main(int argc, char *argv[]) {
         rgb.pixels = reinterpret_cast<uint8_t*>(converted);
         rgb.rowBytes = 3 * sizeof(uint16_t) * jxr_data.width;
 
-        avifResult convertResult = avifImageRGBToYUV(image, &rgb);
+        auto convertResult = avifImageRGBToYUV(image, &rgb);
         if (convertResult != AVIF_RESULT_OK)
         {
             std::cerr << "Failed to convert to YUV(A): " << avifResultToString(convertResult) << "\n";
@@ -352,14 +348,14 @@ int main(int argc, char *argv[]) {
                 // Call avifEncoderAddImage() for each image in your sequence
                 // Only set AVIF_ADD_IMAGE_FLAG_SINGLE if you're not encoding a sequence
                 // Use avifEncoderAddImageGrid() instead with an array of avifImage* to make a grid image
-                avifResult addImageResult = avifEncoderAddImage(encoder, image, 1, AVIF_ADD_IMAGE_FLAG_SINGLE);
+                auto addImageResult = avifEncoderAddImage(encoder, image, 1, AVIF_ADD_IMAGE_FLAG_SINGLE);
                 if (addImageResult != AVIF_RESULT_OK)
                 {
                     std::cerr << "Failed to add image to encoder: " << avifResultToString(addImageResult) << "\n";
                 }
                 else
                 {
-                    avifResult finishResult = avifEncoderFinish(encoder, &avifOutput);
+                    auto finishResult = avifEncoderFinish(encoder, &avifOutput);
                     if (finishResult != AVIF_RESULT_OK)
                     {
                         std::cerr << "Failed to finish encoding: " << avifResultToString(finishResult) << "\n";
@@ -370,7 +366,7 @@ int main(int argc, char *argv[]) {
 
                         FILE* f = nullptr;
                         _wfopen_s(&f, outputFile, L"wb");
-                        size_t bytesWritten = fwrite(avifOutput.data, 1, avifOutput.size, f);
+                        auto bytesWritten = fwrite(avifOutput.data, 1, avifOutput.size, f);
                         fclose(f);
                         if (bytesWritten != avifOutput.size)
                         {

@@ -59,6 +59,11 @@ namespace JxrToAvif
             return _format;
         }
 
+        [[nodiscard]] bool GetIsRealMaxCLL() const
+        {
+            return _realMaxCLL;
+        }
+
         bool Parse();
 
         static void PrintUsage();
@@ -74,6 +79,7 @@ namespace JxrToAvif
         int _speed;
         bool _helpRequired;
         bool _useTiling;
+        bool _realMaxCLL;
         PixelFormat _format;
         uint8_t _depth;
         std::wstring _inputFile;

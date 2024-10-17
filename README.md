@@ -18,6 +18,8 @@ Options:
   --format            Output pixel format. Defaults to yuv444.
                       Must be one of:
                         rgb, yuv444, yuv422, yuv420, yuv400
+  --real-maxcll      Calculate real MaxCLL
+                     instead of top percentile.
 ```
 
 # HDR metadata
