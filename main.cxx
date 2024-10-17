@@ -11,15 +11,13 @@
 
 #include <avif/avif.h>
 #include <simd_math.h>
+#include <string>
+
+#include "PixelFormat.hpp"
+#include "CommandLineParser.hpp"
 #include "jxr_data.h"
 
 constexpr auto INTERMEDIATE_BITS = 16;  // bit depth of the integer texture given to the encoder;
-constexpr auto DEFAULT_SPEED = 6;  // 6 is default speed of the command line encoder, so it should be a good value?;
-#define USE_TILING AVIF_TRUE  // slightly larger file size, but faster encode and decode
-
-constexpr auto TARGET_BITS = 12;  // bit depth of the output, should be 10 or 12;
-#define TARGET_FORMAT AVIF_PIXEL_FORMAT_YUV420
-//#define TARGET_RGB  // uncomment to output RGB instead of YUV (much larger file size)
 
 #define MAXCLL_PERCENTILE 0.9999  // comment out to calculate true MaxCLL instead of top percentile
 
@@ -92,55 +90,43 @@ DWORD WINAPI ThreadFunc(LPVOID lpParam) {
     return 0;
 }
 
+using namespace JxrToAvif;
+
 int main(int argc, char *argv[]) {
-    if ((argc <= 1) || argc > 3 == strcmp(argv[1], "--speed") || argc > 5) {
-        std::cerr << "jxr_to_avid [--speed n] input.jxr [output.avif]\n";
+    CommandLineParser cmdLineParser(argc, argv);
+
+    if(!cmdLineParser.Parse() || cmdLineParser.GetIsHelpRequired())
+    {
+        CommandLineParser::PrintUsage();
         return 1;
     }
 
-    int speed = DEFAULT_SPEED;
-    LPWSTR inputFile;
-    LPCWSTR outputFile = L"output.avif";
+    auto speed = cmdLineParser.GetSpeed();
+    auto inputFile = cmdLineParser.GetInputFile().c_str();
+    auto outputFile = cmdLineParser.GetOutputFile().c_str();
+    auto useTiling = cmdLineParser.GetIsTilingUsed();
+    auto depth = cmdLineParser.GetDepth();
+    auto outputFormat = cmdLineParser.GetPixelFormat();
 
-    {
-        LPWSTR *szArglist;
-        int nArgs;
-
-        szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
-        if (nullptr == szArglist) {
-            std::cerr << "CommandLineToArgvW failed\n";
-            return 1;
-        }
-
-        int rest = 1;
-
-        if (!strcmp("--speed", argv[1])) {
-            speed = atoi(argv[2]);
-            if (speed < AVIF_SPEED_SLOWEST || speed > AVIF_SPEED_FASTEST) {
-                std::cerr << "Speed must be in range of [" << AVIF_SPEED_SLOWEST << ", " << AVIF_SPEED_FASTEST << "]\n";
-                return 1;
-            }
-            rest += 2;
-        }
-
-        inputFile = szArglist[rest + 0];
-
-        if (rest + 1 < argc) {
-            outputFile = szArglist[rest + 1];
-        }
-    }
-
-    // Initialize OLE
-    OleInitialize(NULL);
-
-    jxr_data jxr_data;
-
-    int hr = get_jxr_data(inputFile, &jxr_data);
+    int hr = init_jxr_loader_thread();
 
     if(hr < 0)
     {
-        const wchar_t* errorDesc = get_jxr_error_description(hr);
+        auto errorDesc = get_jxr_error_description(hr);
+        std::wcerr << L"Failed to initialize JXR loader thread: " << errorDesc << L"\n";
+        free_jxr_error_description(errorDesc);
+        return hr;
+    }
+
+    jxr_data jxr_data;
+
+    hr = get_jxr_data(inputFile, &jxr_data);
+
+    if(hr < 0)
+    {
+        auto errorDesc = get_jxr_error_description(hr);
         std::wcerr << L"Failed to get image data: " << errorDesc << L"\n";
+        free_jxr_error_description(errorDesc);
         return hr;
     }
 
@@ -150,7 +136,7 @@ int main(int argc, char *argv[]) {
     {
         std::cerr << "Failed to allocate converted pixels\n";
         free_jxr_data(&jxr_data);
-        OleUninitialize();
+        deinit_jxr_loader_thread();
         return 1;
     }
 
@@ -268,9 +254,26 @@ int main(int argc, char *argv[]) {
     avifEncoder *encoder = nullptr;
     avifRWData avifOutput = AVIF_DATA_EMPTY;
     avifRGBImage rgb = {};
+    avifPixelFormat targetFormat;
+    switch (outputFormat)
+    {
+    case PixelFormatYuv400:
+        targetFormat = AVIF_PIXEL_FORMAT_YUV400;
+        break;
+    case PixelFormatYuv420:
+        targetFormat = AVIF_PIXEL_FORMAT_YUV420;
+        break;
+    case PixelFormatYuv422:
+        targetFormat = AVIF_PIXEL_FORMAT_YUV422;
+        break;
+    case PixelFormatYuv444:
+    case PixelFormatRgb:
+        targetFormat = AVIF_PIXEL_FORMAT_YUV444;
+        break;
+    }
 
-    avifImage *image = avifImageCreate(jxr_data.width, jxr_data.height, TARGET_BITS,
-                                       TARGET_FORMAT); // these values dictate what goes into the final AVIF
+    avifImage *image = avifImageCreate(jxr_data.width, jxr_data.height, depth,
+                                       targetFormat); // these values dictate what goes into the final AVIF
     if (!image)
     {
         std::cerr << "Out of memory\n";
@@ -290,11 +293,14 @@ int main(int argc, char *argv[]) {
         image->colorPrimaries = AVIF_COLOR_PRIMARIES_BT2020;
         image->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SMPTE2084;
 
-#ifdef TARGET_RGB
-        image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
-#else
-        image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT2020_NCL;
-#endif
+        if (outputFormat == PixelFormatRgb)
+        {
+            image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
+        }
+        else
+        {
+            image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT2020_NCL;
+        }
 
         printf("Computed HDR metadata: %u MaxCLL, %u MaxPALL\n", maxCLL, maxPALL);
 
@@ -341,7 +347,7 @@ int main(int argc, char *argv[]) {
                 encoder->qualityAlpha = AVIF_QUALITY_LOSSLESS;
                 encoder->speed = speed;
                 encoder->maxThreads = (int)numThreads;
-                encoder->autoTiling = USE_TILING;
+                encoder->autoTiling = useTiling ? AVIF_TRUE : AVIF_FALSE;
 
                 // Call avifEncoderAddImage() for each image in your sequence
                 // Only set AVIF_ADD_IMAGE_FLAG_SINGLE if you're not encoding a sequence
@@ -389,6 +395,6 @@ int main(int argc, char *argv[]) {
     }
     avifRWDataFree(&avifOutput);
     free_jxr_data(&jxr_data);
-    OleUninitialize();
+    deinit_jxr_loader_thread();
     return returnCode;
 }

@@ -36,7 +36,7 @@ endif()
 
 include_directories(simd_math)
 
-add_executable(jxr_to_avif main.cxx jxr_data.c jxr_data.h)
+add_executable(jxr_to_avif main.cxx jxr_data.c jxr_data.h CommandLineParser.hpp CommandLineParser.cxx PixelFormat.hpp)
 
 target_link_libraries(jxr_to_avif avif aom uuid windowscodecs)
 

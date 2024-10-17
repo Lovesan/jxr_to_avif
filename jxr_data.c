@@ -117,6 +117,17 @@ void free_jxr_data(jxr_data* data)
     memset(data, 0, sizeof(jxr_data));
 }
 
+int init_jxr_loader_thread(void)
+{
+    // Initialize OLE
+    return OleInitialize(NULL);
+}
+
+void deinit_jxr_loader_thread(void)
+{
+    OleUninitialize();
+}
+
 wchar_t* get_jxr_error_description(int code)
 {
     static const wchar_t defaultMessage[] = L"Unidentified error.";

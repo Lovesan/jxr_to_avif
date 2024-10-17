@@ -17,7 +17,7 @@
         {
             "name": "MinGW",
             "displayName": "MinGW",
-            "description": "Using x8_64-w64-mingw32 GCC",
+            "description": "Using x86_64-w64-mingw32 GCC",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
