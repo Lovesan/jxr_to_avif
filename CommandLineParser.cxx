@@ -2,29 +2,27 @@
 
 #include <cwctype>
 #include <iostream>
-#include <windows.h>
-#include "CommandLineParser.hpp"
-
 #include <algorithm>
+#include <exception>
+#include "CommandLineParser.hpp"
 
 namespace JxrToAvif
 {
-    CommandLineParser::CommandLineParser(int, char**)
-        : _argv(nullptr), _argc(0), _speed(DefaultSpeed),
+    CommandLineParser::CommandLineParser(int argc, char* argv[])
+        : _cmdline{}, _speed(DefaultSpeed),
         _helpRequired(false), _useTiling(true), _realMaxCLL(false),
         _format(PixelFormatYuv444), _depth(12), _outputFile(DefaultOutputFile)
     {
-        const auto cmdLine = GetCommandLineW();
-        _argv = CommandLineToArgvW(cmdLine, &_argc);
+        auto rv = jxr_get_command_line(argc, argv, &_cmdline);
+        if(rv < 0)
+        {
+            throw std::runtime_error("Failed to retrieve process command line.");
+        }
     }
 
     CommandLineParser::~CommandLineParser()
     {
-        if (_argv)
-        {
-            LocalFree(reinterpret_cast<HLOCAL>(_argv));
-            _argv = nullptr;
-        }
+        jxr_free_command_line(&_cmdline);
     }
 
     bool CommandLineParser::Parse()
@@ -32,12 +30,12 @@ namespace JxrToAvif
         int i = 1;
         bool hasInputFile = false, hasOutputFile = false;
 
-        if (_argc < 1)
+        if (_cmdline.argc < 1)
             return false;
 
-        while (i < _argc)
+        while (i < _cmdline.argc)
         {
-            auto arg = std::wstring(_argv[i]);
+            auto arg = std::wstring(_cmdline.argv[i]);
             if (arg == L"--help")
             {
                 _helpRequired = true;
@@ -45,11 +43,11 @@ namespace JxrToAvif
             else if (arg == L"--speed")
             {
                 ++i;
-                if (i >= _argc)
+                if (i >= _cmdline.argc)
                 {
                     return false;
                 }
-                arg = std::wstring(_argv[i]);
+                arg = std::wstring(_cmdline.argv[i]);
                 try
                 {
                     const auto n = std::stoi(arg);
@@ -65,11 +63,11 @@ namespace JxrToAvif
             else if(arg == L"--depth")
             {
                 ++i;
-                if(i >= _argc)
+                if(i >= _cmdline.argc)
                 {
                     return false;
                 }
-                arg = std::wstring(_argv[i]);
+                arg = std::wstring(_cmdline.argv[i]);
                 try
                 {
                     const auto n = std::stoi(arg);
@@ -85,11 +83,11 @@ namespace JxrToAvif
             else if (arg == L"--format")
             {
                 ++i;
-                if(i >= _argc)
+                if(i >= _cmdline.argc)
                 {
                     return false;
                 }
-                arg = std::wstring(_argv[i]);
+                arg = std::wstring(_cmdline.argv[i]);
                 std::transform(arg.begin(), arg.end(), arg.begin(), std::towlower);
                 if(arg == L"rgb")
                 {

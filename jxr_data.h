@@ -20,17 +20,13 @@ typedef struct
     uint8_t* pixels;
 } jxr_data;
 
-int get_jxr_data(const wchar_t* filename, jxr_data* data);
+int jxr_load_data(const wchar_t* filename, jxr_data* data);
 
-void free_jxr_data(jxr_data* data);
+void jxr_free_data(jxr_data* data);
 
-int init_jxr_loader_thread(void);
+int jxr_init_loader_thread(void);
 
-void deinit_jxr_loader_thread(void);
-
-wchar_t* get_jxr_error_description(int code);
-
-void free_jxr_error_description(wchar_t* desc);
+void jxr_deinit_loader_thread(void);
 
 #ifdef __cplusplus
 }

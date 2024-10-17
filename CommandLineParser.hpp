@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include "PixelFormat.hpp"
+#include "jxr_sys_helpers.h"
 
 namespace JxrToAvif
 {
@@ -74,8 +75,7 @@ namespace JxrToAvif
         // 6 is default speed of the command line encoder, so it should be a good value?
         static constexpr int DefaultSpeed = 6;
 
-        wchar_t** _argv;
-        int _argc;
+        jxr_command_line _cmdline;
         int _speed;
         bool _helpRequired;
         bool _useTiling;

@@ -12,14 +12,17 @@
 #define SAFE_RELEASE(p) do{if(p){(p)->lpVtbl->Release(p); (p) = NULL;}}while(0)
 #endif
 
-int get_jxr_data(const wchar_t* filename, jxr_data* data)
+int jxr_load_data(const wchar_t* filename, jxr_data* data)
 {
     IWICImagingFactory* pFactory = NULL;
     IWICBitmapFrameDecode* pFrame = NULL;
     IWICBitmapDecoder* pDecoder = NULL;
     IWICBitmapSource* pBitmapSource = NULL;
 
-    memset(data, 0, sizeof(jxr_data));
+    if (!filename || !data)
+        return E_INVALIDARG;
+
+    ZeroMemory(data, sizeof(jxr_data));
 
     HRESULT hr = CoCreateInstance(
         &CLSID_WICImagingFactory,
@@ -102,54 +105,28 @@ exit:
 
     if(FAILED(hr))
     {
-        free_jxr_data(data);
+        jxr_free_data(data);
     }
 
     return hr;
 }
 
-void free_jxr_data(jxr_data* data)
+void jxr_free_data(jxr_data* data)
 {
-    if(data && data->pixels)
+    if(data)
     {
         free(data->pixels);
+        ZeroMemory(data, sizeof(jxr_data));
     }
-    memset(data, 0, sizeof(jxr_data));
 }
 
-int init_jxr_loader_thread(void)
+int jxr_init_loader_thread(void)
 {
     // Initialize OLE
     return OleInitialize(NULL);
 }
 
-void deinit_jxr_loader_thread(void)
+void jxr_deinit_loader_thread(void)
 {
     OleUninitialize();
-}
-
-wchar_t* get_jxr_error_description(int code)
-{
-    static const wchar_t defaultMessage[] = L"Unidentified error.";
-    LPWSTR buffer = NULL;
-    DWORD rv = FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        (DWORD)code,
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-        (LPWSTR)&buffer,
-        0,
-        NULL);
-    if(!rv)
-    {
-        buffer = LocalAlloc(LMEM_ZEROINIT, sizeof(defaultMessage));
-        wcscpy_s(buffer, ARRAYSIZE(defaultMessage) - 1, defaultMessage);
-    }
-    return buffer;
-}
-
-void free_jxr_error_description(wchar_t* desc)
-{
-    if (desc)
-        LocalFree(desc);
 }
