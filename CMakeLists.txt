@@ -5,6 +5,11 @@ include(CheckCXXCompilerFlag)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 17)
 
+
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libavif/CMakeLists.txt")
+    message(FATAL_ERROR "The submodules were not downloaded! Please update submodules and try again.")
+endif()
+
 set(ENABLE_DOCS 0)
 set(ENABLE_EXAMPLES 0)
 set(ENABLE_TESTDATA 0)
@@ -28,10 +33,6 @@ elseif(NOT MSVC)
     add_definitions(-mavx2 -march=native)
     add_compile_options(-ffast-math)
     add_link_options(-s --static)
-endif()
-
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libavif/CMakeLists.txt")
-    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
 include_directories(simd_math)
