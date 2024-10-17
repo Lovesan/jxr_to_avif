@@ -3,7 +3,7 @@
     "configurePresets": [
         {
             "name": "MSVC",
-            "displayName": "Visual Studio Community 2022 Release - amd64",
+            "displayName": "Visual Studio 2022 Release - amd64",
             "description": "Using compilers for Visual Studio 17 2022 (x64 architecture)",
             "generator": "Visual Studio 17 2022",
             "toolset": "host=x64",
@@ -30,7 +30,7 @@
     "buildPresets": [
         {
             "name": "MSVC",
-            "displayName": "Visual Studio Community 2022 Release - amd64 - Release",
+            "displayName": "Visual Studio 2022 Release - amd64 - Release",
             "configurePreset": "MSVC",
             "configuration": "Release"
         },
