@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
         avifEncoder* encoder = nullptr;
         avifRWData avifOutput = AVIF_DATA_EMPTY;
         avifRGBImage rgb = {};
-        avifPixelFormat targetFormat;
+        avifPixelFormat targetFormat = AVIF_PIXEL_FORMAT_YUV444;
         switch (outputFormat)
         {
         case PixelFormatYuv400:

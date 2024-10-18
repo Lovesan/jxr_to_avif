@@ -7,7 +7,17 @@ set(CMAKE_CXX_STANDARD 17)
 
 
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libavif/CMakeLists.txt")
-    message(FATAL_ERROR "The submodules were not downloaded! Please update submodules and try again.")
+    message(FATAL_ERROR "The libavif submodule was not downloaded! Please update submodules and try again.")
+endif()
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/simd_math/simd_math.h")
+    message(FATAL_ERROR "The simd_math submodule was not downloaded! Please update submodules and try again.")
+endif()
+
+if(MSVC)
+    add_definitions(/arch:AVX2)
+elseif(NOT MSVC)
+    set(CMAKE_C_FLAGS "-mavx2 -mfma -march=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 
 set(ENABLE_DOCS 0)
@@ -28,10 +38,9 @@ set(AVIF_BUILD_APPS OFF)
 add_subdirectory(libavif)
 
 if(MSVC)
-    add_definitions(/arch:AVX2)
+    add_definitions(/W4)
 elseif(NOT MSVC)
-    add_definitions(-mavx2 -march=native)
-    add_compile_options(-ffast-math)
+    add_compile_options(-Wall -Wextra -ffast-math)
     add_link_options(-s --static)
 endif()
 
