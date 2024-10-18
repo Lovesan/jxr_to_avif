@@ -24,3 +24,56 @@ Options:
 
 # HDR metadata
 The MaxCLL value is calculated almost identically to [HDR + WCG Image Viewer](https://github.com/13thsymphony/HDRImageViewer) by taking the light level of the 99.99 percentile brightest pixel. This is an underestimate of the "real" MaxCLL value calculated according to H.274, so it technically causes some clipping when tone mapping. However, following the spec can lead to a much higher MaxCLL value, which causes e.g. Chromium's tone mapping to significantly dim the entire image, so this trade-off seems to be worth it.
+
+# Building with MSVC++
+
+You will need **CMake**, **NASM**, **Perl** and **Visual Studio 2022 build tools**.
+
+Make sure that git, cmake, nasm and perl are in your PATH.
+
+First, you need to clone and build **libavif** dependencies.
+
+Open PowerShell, cd into the repo directory.
+
+Change dir to `ext` directory inside `./libavif`.
+````pwsh
+cd ./libavif/ext
+````
+
+Build **libyuv**:
+````pwsh
+git clone --single-branch https://chromium.googlesource.com/libyuv/libyuv
+cd ./libyuv
+git checkout a6a2ec65
+cd ..
+
+cmake -B ./libyuv/build -S ./libyuv -G 'Visual Studio 17 2022'
+
+cmake --build ./libyuv/build --parallel --config Release --target yuv
+
+cp ./libyuv/build/Release/*.lib ./libyuv/build
+````
+
+Build **libaom**:
+````pwsh
+git clone -b v3.9.1 --depth 1 https://aomedia.googlesource.com/aom
+
+cmake -B ./aom/build.libavif -S ./aom `
+      -G 'Visual Studio 17 2022' `
+      -DENABLE_NASM=ON -DBUILD_SHARED_LIBS=OFF -DCONFIG_PIC=1 -DENABLE_DOCS=0 `
+      -DENABLE_EXAMPLES=0 -DENABLE_TESTDATA=0 -DENABLE_TESTS=0 -DENABLE_TOOLS=0
+
+cmake --build ./aom/build.libavif --parallel --config Release
+
+cp ./aom/build.libavif/Release/*.lib ./aom/build.libavif
+````
+
+Now configure and build the program itself:
+
+````pwsh
+cd ../../
+cmake --preset MSVC
+cmake --build --preset MSVC --parallel --config Release
+````
+
+Now you have the progam at `./build/MSVC/Release/jxr_to_avif.exe`
