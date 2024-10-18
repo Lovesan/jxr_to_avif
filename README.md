@@ -36,12 +36,12 @@ First, you need to clone and build **libavif** dependencies.
 Open PowerShell, cd into the repo directory.
 
 Change dir to `ext` directory inside `./libavif`.
-````pwsh
+````powershell
 cd ./libavif/ext
 ````
 
 Build **libyuv**:
-````pwsh
+````powershell
 git clone --single-branch https://chromium.googlesource.com/libyuv/libyuv
 cd ./libyuv
 git checkout a6a2ec65
@@ -55,7 +55,7 @@ cp ./libyuv/build/Release/*.lib ./libyuv/build
 ````
 
 Build **libaom**:
-````pwsh
+````powershell
 git clone -b v3.9.1 --depth 1 https://aomedia.googlesource.com/aom
 
 cmake -B ./aom/build.libavif -S ./aom `
@@ -70,7 +70,7 @@ cp ./aom/build.libavif/Release/*.lib ./aom/build.libavif
 
 Now configure and build the program itself:
 
-````pwsh
+````powershell
 cd ../../
 cmake --preset MSVC
 cmake --build --preset MSVC --parallel --config Release
