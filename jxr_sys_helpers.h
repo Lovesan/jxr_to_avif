@@ -1,3 +1,5 @@
+// Copyright 2024 Dmitry Ignatiev. All rights reserved
+
 #ifndef __JXR_SYS_HELPERS__H__
 #define __JXR_SYS_HELPERS__H__
 

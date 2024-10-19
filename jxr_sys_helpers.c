@@ -1,3 +1,5 @@
+// Copyright 2024 Dmitry Ignatiev. All rights reserved
+
 #include <string.h>
 #include <windows.h>
 #include <intsafe.h>
@@ -48,6 +50,9 @@ void jxr_free_error_description(char* desc)
 
 int jxr_get_command_line(int argc, char* argv[], jxr_command_line* cmdline)
 {
+    (void)argc;
+    (void)argv;
+
     if (!cmdline)
         return E_INVALIDARG;
 

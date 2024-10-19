@@ -8,12 +8,12 @@
 
 namespace JxrToAvif
 {
-    CommandLineParser::CommandLineParser(int argc, char* argv[])
+    CommandLineParser::CommandLineParser([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
         : _cmdline{}, _speed(DefaultSpeed),
         _helpRequired(false), _useTiling(true), _realMaxCLL(false),
-        _format(PixelFormatYuv444), _depth(12), _outputFile(DefaultOutputFile)
+        _format(PixelFormat::Yuv444), _depth(12), _outputFile(DefaultOutputFile)
     {
-        auto rv = jxr_get_command_line(argc, argv, &_cmdline);
+        const auto rv = jxr_get_command_line(argc, argv, &_cmdline);
         if(rv < 0)
         {
             throw std::runtime_error("Failed to retrieve process command line.");
@@ -91,23 +91,23 @@ namespace JxrToAvif
                 std::transform(arg.begin(), arg.end(), arg.begin(), std::towlower);
                 if(arg == L"rgb")
                 {
-                    _format = PixelFormatRgb;
+                    _format = PixelFormat::Rgb;
                 }
                 else if(arg == L"yuv444")
                 {
-                    _format = PixelFormatYuv444;
+                    _format = PixelFormat::Yuv444;
                 }
                 else if(arg == L"yuv422")
                 {
-                    _format = PixelFormatYuv422;
+                    _format = PixelFormat::Yuv422;
                 }
                 else if(arg == L"yuv420")
                 {
-                    _format = PixelFormatYuv420;
+                    _format = PixelFormat::Yuv420;
                 }
                 else if(arg == L"yuv400")
                 {
-                    _format = PixelFormatYuv400;
+                    _format = PixelFormat::Yuv400;
                 }
                 else
                 {

@@ -5,13 +5,13 @@
 
 namespace JxrToAvif
 {
-    enum PixelFormat
+    enum class PixelFormat
     {
-        PixelFormatRgb = 0,
-        PixelFormatYuv444,
-        PixelFormatYuv422,
-        PixelFormatYuv420,
-        PixelFormatYuv400
+        Rgb = 0,
+        Yuv444,
+        Yuv422,
+        Yuv420,
+        Yuv400
     };
 }
 
