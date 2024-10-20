@@ -18,11 +18,11 @@ namespace JxrToAvif
 
         JxrImage(const JxrImage&) = delete;
 
-        JxrImage(JxrImage&&) = default;
+        JxrImage(JxrImage&&) = delete;
 
         JxrImage& operator=(const JxrImage&) = delete;
 
-        JxrImage& operator=(JxrImage&&) = default;
+        JxrImage& operator=(JxrImage&&) = delete;
 
         ~JxrImage() = default;
 
